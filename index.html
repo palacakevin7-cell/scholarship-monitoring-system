@@ -20,7 +20,134 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div id="app" class="app-container">
+  <!-- ================= DEDICATED FULL-SCREEN LOGIN PAGE ================= -->
+  <div id="login-page-screen" class="login-page-wrapper">
+    <div class="login-page-overlay"></div>
+    <div class="login-page-content">
+      <!-- Left Hero Branding -->
+      <div class="login-hero">
+        <div class="login-hero-brand">
+          <div class="brand-logo large-logo">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <div class="brand-text">
+            <span class="brand-name hero-title">Scholar<span class="brand-accent">Pulse</span></span>
+            <span class="brand-sub hero-sub">Scholarship Monitoring & Academic Compliance System</span>
+          </div>
+        </div>
+        
+        <p class="login-hero-desc">
+          Centralized university platform for scholar grade submissions, official transcript verification, automated rule compliance checking, deficiency tracking, and live executive dashboard monitoring.
+        </p>
+
+        <div class="login-features-list">
+          <div class="feature-item">
+            <i class="fa-solid fa-square-check text-success"></i>
+            <span>Real-time Grade Verification Workflow (BR-04, BR-05)</span>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-gears text-info"></i>
+            <span>Automated Program Rule Compliance Engine (BR-07)</span>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-triangle-exclamation text-warning"></i>
+            <span>Instant Deficiency Identification & Audit Logging</span>
+          </div>
+          <div class="feature-item">
+            <i class="fa-solid fa-chart-pie text-purple"></i>
+            <span>Executive Analytics & Live Dashboard Metrics</span>
+          </div>
+        </div>
+
+        <div class="login-tech-pills">
+          <span class="tech-pill"><i class="fa-solid fa-database"></i> Supabase PostgreSQL</span>
+          <span class="tech-pill"><i class="fa-brands fa-github"></i> GitHub Pages</span>
+          <span class="tech-pill"><i class="fa-solid fa-shield-halved"></i> Role RBAC</span>
+        </div>
+      </div>
+
+      <!-- Right Login Card -->
+      <div class="login-card-panel glass-panel">
+        <div class="login-card-header">
+          <h2>Sign In to Portal</h2>
+          <p class="text-dim">Enter your authorized credentials or select a role demo</p>
+        </div>
+
+        <div class="docs-navigation-tabs mb-4">
+          <button class="doc-tab-btn active" id="page-auth-tab-login" onclick="switchPageAuthTab('login')"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+          <button class="doc-tab-btn" id="page-auth-tab-register" onclick="switchPageAuthTab('register')"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+        </div>
+
+        <!-- Form 1: Sign In -->
+        <form id="page-form-login">
+          <div class="form-group">
+            <label for="page-login-role">Select User Authorization Role <span class="required">*</span></label>
+            <select id="page-login-role" class="form-select" required>
+              <option value="staff">Scholarship Staff / Admin</option>
+              <option value="coordinator">Scholarship Coordinator</option>
+              <option value="scholar">Scholar (Student)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="page-login-email">Email or Student ID <span class="required">*</span></label>
+            <input type="text" id="page-login-email" class="form-input" placeholder="admin@university.edu.ph" value="admin@university.edu.ph" required>
+          </div>
+
+          <div class="form-group">
+            <label for="page-login-password">Password <span class="required">*</span></label>
+            <input type="password" id="page-login-password" class="form-input" value="••••••••" required>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block-lg">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In to Portal
+          </button>
+        </form>
+
+        <!-- Form 2: Register Account -->
+        <form id="page-form-register" style="display: none;">
+          <div class="form-group">
+            <label for="page-reg-name">Full Name <span class="required">*</span></label>
+            <input type="text" id="page-reg-name" class="form-input" placeholder="e.g. Maria Clara Santos" required>
+          </div>
+
+          <div class="form-group">
+            <label for="page-reg-role">Account Type <span class="required">*</span></label>
+            <select id="page-reg-role" class="form-select" required>
+              <option value="scholar">Scholar (Student Account)</option>
+              <option value="staff">Scholarship Staff Account</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="page-reg-email">Email Address / Student ID <span class="required">*</span></label>
+            <input type="email" id="page-reg-email" class="form-input" placeholder="student@university.edu.ph" required>
+          </div>
+
+          <div class="form-group">
+            <label for="page-reg-password">Password <span class="required">*</span></label>
+            <input type="password" id="page-reg-password" class="form-input" placeholder="Min 6 characters" required>
+          </div>
+
+          <button type="submit" class="btn btn-accent btn-block-lg">
+            <i class="fa-solid fa-user-check"></i> Register Account
+          </button>
+        </form>
+
+        <!-- Quick 1-Click Demo Buttons -->
+        <div class="quick-demo-section mt-4">
+          <span class="quick-demo-title"><i class="fa-solid fa-bolt text-warning"></i> Quick 1-Click Demo Access:</span>
+          <div class="quick-demo-buttons">
+            <button class="btn btn-sm btn-outline" onclick="quickLoginDemo('staff')"><i class="fa-solid fa-user-shield"></i> Staff Admin</button>
+            <button class="btn btn-sm btn-outline" onclick="quickLoginDemo('coordinator')"><i class="fa-solid fa-user-gear"></i> Coordinator</button>
+            <button class="btn btn-sm btn-outline" onclick="quickLoginDemo('scholar')"><i class="fa-solid fa-user-graduate"></i> Scholar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app" class="app-container" style="display: none;">
     <!-- Top Bar Navigation -->
     <header class="navbar">
       <div class="nav-brand">
@@ -332,7 +459,11 @@
             <h1 class="section-title">Academic Compliance Evaluation Engine</h1>
             <p class="section-subtitle">Automated rule verification against program rules with deficiency tracking and status updates</p>
           </div>
-          <button id="btn-run-all-compliance" class="btn btn-accent"><i class="fa-solid fa-gears"></i> Run Batch Compliance Evaluation</button>
+          <div class="action-bar-buttons">
+            <button id="btn-run-all-compliance" class="btn btn-accent"><i class="fa-solid fa-gears"></i> Batch Evaluate</button>
+            <button id="btn-process-renewals" class="btn btn-primary"><i class="fa-solid fa-rotate"></i> Process Renewal</button>
+            <button id="btn-generate-report" class="btn btn-secondary"><i class="fa-solid fa-file-invoice"></i> Generate Compliance Report</button>
+          </div>
         </div>
 
         <div class="compliance-summary-banner glass-panel">
@@ -1074,6 +1205,142 @@ gantt
           <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Submit Grades for Verification</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Process Scholarship Renewal (UC-12) -->
+  <div class="modal-backdrop" id="modal-renewal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-rotate"></i> Process Scholarship Grant Renewals</h3>
+        <button class="modal-close-btn" data-close="modal-renewal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-4">Review eligible scholars with <strong>Compliant</strong> status for annual grant renewal for the upcoming academic year.</p>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Scholar Name</th>
+                <th>Program</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="renewal-tbody">
+              <!-- JS populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close="modal-renewal">Close</button>
+        <button id="btn-approve-all-renewals" class="btn btn-primary"><i class="fa-solid fa-award"></i> Approve All Eligible Renewals</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Generate Compliance Summary Report (UC-15) -->
+  <div class="modal-backdrop" id="modal-report">
+    <div class="modal-box" style="max-width: 720px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-file-invoice"></i> Executive Scholarship Compliance Summary Report</h3>
+        <button class="modal-close-btn" data-close="modal-report">&times;</button>
+      </div>
+      <div class="modal-body" id="report-modal-body">
+        <!-- JS populated report preview -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close="modal-report">Close</button>
+        <button onclick="window.print()" class="btn btn-primary"><i class="fa-solid fa-print"></i> Print / Save PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: View Deficiency Detail (UC-10) -->
+  <div class="modal-backdrop" id="modal-deficiency">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-triangle-exclamation text-danger"></i> Deficiency Audit Details</h3>
+        <button class="modal-close-btn" data-close="modal-deficiency">&times;</button>
+      </div>
+      <div class="modal-body" id="deficiency-modal-body">
+        <!-- JS populated deficiency details -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-close="modal-deficiency">Acknowledge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: User Authentication & Sign Up (UC-01) -->
+  <div class="modal-backdrop" id="modal-auth">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header" style="justify-content: center; flex-direction: column; gap: 0.5rem; text-align: center;">
+        <div class="brand-logo" style="width: 52px; height: 52px; font-size: 1.6rem; margin-bottom: 0.25rem;">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <h3 style="font-size: 1.3rem;"><span class="brand-name">Scholar<span class="brand-accent">Pulse</span> Access</span></h3>
+        <p class="text-dim" style="font-size: 0.85rem;">Student Scholarship & Academic Compliance Portal</p>
+      </div>
+      <div class="modal-body">
+        <div class="docs-navigation-tabs" style="margin-bottom: 1.25rem;">
+          <button class="doc-tab-btn active" id="auth-tab-login" onclick="switchAuthTab('login')"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
+          <button class="doc-tab-btn" id="auth-tab-register" onclick="switchAuthTab('register')"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+        </div>
+
+        <!-- Form 1: Login Form -->
+        <form id="form-auth-login">
+          <div class="form-group">
+            <label for="auth-login-role">Login As / Select Role <span class="required">*</span></label>
+            <select id="auth-login-role" class="form-select" required>
+              <option value="staff">Scholarship Staff / Admin</option>
+              <option value="coordinator">Scholarship Coordinator</option>
+              <option value="scholar">Scholar (Student)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="auth-login-email">Email or Student ID <span class="required">*</span></label>
+            <input type="text" id="auth-login-email" class="form-input" placeholder="admin@university.edu.ph" value="admin@university.edu.ph" required>
+          </div>
+          <div class="form-group">
+            <label for="auth-login-password">Password <span class="required">*</span></label>
+            <input type="password" id="auth-login-password" class="form-input" value="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In to Portal
+          </button>
+        </form>
+
+        <!-- Form 2: Sign Up / Register Form -->
+        <form id="form-auth-register" style="display: none;">
+          <div class="form-group">
+            <label for="auth-reg-name">Full Name <span class="required">*</span></label>
+            <input type="text" id="auth-reg-name" class="form-input" placeholder="e.g. Maria Santos" required>
+          </div>
+          <div class="form-group">
+            <label for="auth-reg-role">Account Type <span class="required">*</span></label>
+            <select id="auth-reg-role" class="form-select" required>
+              <option value="scholar">Scholar (Student Account)</option>
+              <option value="staff">Scholarship Staff Account</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="auth-reg-email">Email Address / Student ID <span class="required">*</span></label>
+            <input type="email" id="auth-reg-email" class="form-input" placeholder="student@university.edu.ph" required>
+          </div>
+          <div class="form-group">
+            <label for="auth-reg-password">Password <span class="required">*</span></label>
+            <input type="password" id="auth-reg-password" class="form-input" placeholder="Min. 6 characters" required>
+          </div>
+          <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 1rem; padding: 0.75rem;">
+            <i class="fa-solid fa-user-check"></i> Register Account
+          </button>
+        </form>
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <small class="text-dim"><i class="fa-solid fa-shield-halved"></i> Protected by Supabase Auth & Role Access Control</small>
+      </div>
     </div>
   </div>
 

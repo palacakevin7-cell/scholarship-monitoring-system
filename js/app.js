@@ -71,6 +71,15 @@ function initRoleSwitcher() {
       refreshAllViews();
     });
   }
+
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      document.getElementById('login-page-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      showToast("Signed out. Returned to Login Portal.", "info");
+    });
+  }
 }
 
 function updateRoleUI(role) {
@@ -482,6 +491,10 @@ function initModals() {
     refreshAllViews();
   });
 
+  document.getElementById('btn-process-renewals').addEventListener('click', () => openRenewalModal());
+  document.getElementById('btn-generate-report').addEventListener('click', () => openComplianceReportModal());
+  document.getElementById('btn-approve-all-renewals').addEventListener('click', () => approveAllRenewalsAction());
+
   document.getElementById('btn-quick-demo-seed').addEventListener('click', () => {
     db.resetToDefault();
     ComplianceEngine.runAllComplianceEvaluations();
@@ -751,3 +764,279 @@ function showToast(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 4000);
 }
+
+/* ==========================================================================
+   USE CASE IMPLEMENTATIONS: RENEWAL, REPORTING, & DEFICIENCY VIEW
+   ========================================================================== */
+function openRenewalModal() {
+  const scholars = db.getScholars();
+  const programs = db.getPrograms();
+  const tbody = document.getElementById('renewal-tbody');
+  tbody.innerHTML = '';
+
+  const eligible = scholars.filter(s => s.status === 'Compliant' || s.status === 'For Renewal' || s.status === 'Renewed');
+
+  if (eligible.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted); padding: 1.5rem;">
+      No scholars are currently eligible for annual grant renewal.
+    </td></tr>`;
+  } else {
+    eligible.forEach(s => {
+      const prog = programs.find(p => p.id === s.scholarship_id);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${s.full_name}</strong><br><small class="text-dim">${s.student_id}</small></td>
+        <td><span class="badge bg-active">${prog ? prog.program_name : 'N/A'}</span></td>
+        <td>${getStatusBadgeHtml(s.status)}</td>
+        <td>
+          ${s.status === 'Renewed' ? `<span class="badge bg-renewed"><i class="fa-solid fa-check"></i> Grant Renewed</span>` : `
+            <button class="btn btn-sm btn-accent" onclick="approveSingleRenewal('${s.id}')">
+              <i class="fa-solid fa-award"></i> Approve Renewal
+            </button>
+          `}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  openModal('modal-renewal');
+}
+
+window.approveSingleRenewal = function(scholarId) {
+  db.updateScholarStatus(scholarId, 'Renewed');
+  showToast("Scholarship grant successfully renewed!", "success");
+  openRenewalModal();
+  refreshAllViews();
+};
+
+function approveAllRenewalsAction() {
+  const scholars = db.getScholars();
+  let count = 0;
+  scholars.forEach(s => {
+    if (s.status === 'Compliant' || s.status === 'For Renewal') {
+      db.updateScholarStatus(s.id, 'Renewed');
+      count++;
+    }
+  });
+  showToast(`Annual scholarship renewals approved for ${count} eligible scholar(s)!`, "success");
+  closeModal('modal-renewal');
+  refreshAllViews();
+}
+
+function openComplianceReportModal() {
+  const scholars = db.getScholars();
+  const submissions = db.getSubmissions();
+  const programs = db.getPrograms();
+  const reports = ComplianceEngine.runAllComplianceEvaluations();
+
+  const total = scholars.length;
+  const compliantCount = reports.filter(r => r.isCompliant).length;
+  const deficiencyCount = reports.filter(r => !r.isCompliant).length;
+  const complianceRate = total > 0 ? ((compliantCount / total) * 100).toFixed(1) : '0.0';
+
+  const modalBody = document.getElementById('report-modal-body');
+  modalBody.innerHTML = `
+    <div style="border-bottom: 2px solid var(--accent-primary); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+      <h2 style="font-size: 1.4rem; font-weight: 800;"><i class="fa-solid fa-graduation-cap"></i> ScholarPulse Academic Compliance Report</h2>
+      <p class="text-dim" style="font-size: 0.85rem;">Generated on: ${new Date().toLocaleString()} | Official University Record</p>
+    </div>
+
+    <div class="metrics-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 1.5rem;">
+      <div class="metric-card card-total" style="padding: 1rem;">
+        <div class="metric-info">
+          <span class="metric-title">Total Active Scholars</span>
+          <span class="metric-value">${total}</span>
+        </div>
+      </div>
+      <div class="metric-card card-compliant" style="padding: 1rem;">
+        <div class="metric-info">
+          <span class="metric-title">Compliance Rate</span>
+          <span class="metric-value text-success">${complianceRate}%</span>
+        </div>
+      </div>
+      <div class="metric-card card-deficiency" style="padding: 1rem;">
+        <div class="metric-info">
+          <span class="metric-title">With Deficiency</span>
+          <span class="metric-value text-danger">${deficiencyCount}</span>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="mb-4" style="font-weight: 700;">Program Breakdown Summary</h4>
+    <div class="table-container mb-4">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Scholarship Program Name</th>
+            <th>Required GWA</th>
+            <th>Min Units</th>
+            <th>Failing Grade Policy</th>
+            <th>Active Scholars</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${programs.map(p => {
+            const count = scholars.filter(s => s.scholarship_id === p.id).length;
+            return `<tr>
+              <td><strong>${p.program_name}</strong></td>
+              <td>&le; ${p.required_gwa.toFixed(2)}</td>
+              <td>${p.min_units} units</td>
+              <td>${p.allow_failing_grade ? 'Allowed (Max 1)' : 'Strict (0 Fails)'}</td>
+              <td><strong>${count}</strong></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <h4 class="mb-4" style="font-weight: 700;">Detailed Scholar Compliance Audit Log</h4>
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Scholar Name</th>
+            <th>Submitted GWA</th>
+            <th>Units</th>
+            <th>Fails</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${reports.map(r => `
+            <tr>
+              <td><strong>${r.scholarName}</strong></td>
+              <td>${r.submittedGwa.toFixed(2)}</td>
+              <td>${r.submittedUnits}</td>
+              <td>${r.failedSubjects}</td>
+              <td>${r.isCompliant ? `<span class="badge bg-compliant">COMPLIANT</span>` : `<span class="badge bg-deficiency">DEFICIENCY</span>`}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  openModal('modal-report');
+}
+
+/* ==========================================================================
+   AUTHENTICATION & SIGN UP HANDLERS (UC-01)
+   ========================================================================== */
+window.switchAuthTab = function(tab) {
+  const loginBtn = document.getElementById('auth-tab-login');
+  const regBtn = document.getElementById('auth-tab-register');
+  const loginForm = document.getElementById('form-auth-login');
+  const regForm = document.getElementById('form-auth-register');
+
+  if (tab === 'login') {
+    loginBtn.classList.add('active');
+    regBtn.classList.remove('active');
+    loginForm.style.display = 'block';
+    regForm.style.display = 'none';
+  } else {
+    regBtn.classList.add('active');
+    loginBtn.classList.remove('active');
+    regForm.style.display = 'block';
+    loginForm.style.display = 'none';
+  }
+};
+
+document.getElementById('form-auth-login').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const role = document.getElementById('auth-login-role').value;
+  const email = document.getElementById('auth-login-email').value.trim();
+
+  db.setCurrentRole(role);
+  const select = document.getElementById('current-role-select');
+  if (select) select.value = role;
+  updateRoleUI(role);
+
+  closeModal('modal-auth');
+  showToast(`Successfully signed in as ${role.toUpperCase()} (${email})`, "success");
+  refreshAllViews();
+});
+
+document.getElementById('form-auth-register').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('auth-reg-name').value.trim();
+  const role = document.getElementById('auth-reg-role').value;
+  const email = document.getElementById('auth-reg-email').value.trim();
+
+  db.setCurrentRole(role);
+  const user = db.getCurrentUser();
+  user.full_name = name;
+  db.save(DB_KEYS.CURRENT_USER, user);
+
+  const select = document.getElementById('current-role-select');
+  if (select) select.value = role;
+  updateRoleUI(role);
+
+  closeModal('modal-auth');
+  showToast(`Account created successfully! Welcome, ${name}.`, "success");
+  refreshAllViews();
+});
+
+/* ==========================================================================
+   DEDICATED FULL-SCREEN LOGIN PAGE HANDLERS
+   ========================================================================== */
+window.switchPageAuthTab = function(tab) {
+  const loginBtn = document.getElementById('page-auth-tab-login');
+  const regBtn = document.getElementById('page-auth-tab-register');
+  const loginForm = document.getElementById('page-form-login');
+  const regForm = document.getElementById('page-form-register');
+
+  if (tab === 'login') {
+    loginBtn.classList.add('active');
+    regBtn.classList.remove('active');
+    loginForm.style.display = 'block';
+    regForm.style.display = 'none';
+  } else {
+    regBtn.classList.add('active');
+    loginBtn.classList.remove('active');
+    regForm.style.display = 'block';
+    loginForm.style.display = 'none';
+  }
+};
+
+window.performUserLogin = function(role, emailName) {
+  db.setCurrentRole(role);
+  const select = document.getElementById('current-role-select');
+  if (select) select.value = role;
+  updateRoleUI(role);
+
+  // Transition from Login Page Screen to Main App
+  document.getElementById('login-page-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  ComplianceEngine.runAllComplianceEvaluations();
+  refreshAllViews();
+  showToast(`Welcome! Authenticated as ${role.toUpperCase()} (${emailName})`, "success");
+};
+
+window.quickLoginDemo = function(role) {
+  let emailName = 'admin@university.edu.ph';
+  if (role === 'coordinator') emailName = 'reyes@university.edu.ph';
+  if (role === 'scholar') emailName = 'maria.santos@student.edu.ph';
+  performUserLogin(role, emailName);
+};
+
+document.getElementById('page-form-login').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const role = document.getElementById('page-login-role').value;
+  const email = document.getElementById('page-login-email').value.trim();
+  performUserLogin(role, email);
+});
+
+document.getElementById('page-form-register').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('page-reg-name').value.trim();
+  const role = document.getElementById('page-reg-role').value;
+  const email = document.getElementById('page-reg-email').value.trim();
+
+  const user = db.getCurrentUser();
+  user.full_name = name;
+  db.save(DB_KEYS.CURRENT_USER, user);
+
+  performUserLogin(role, email);
+});
