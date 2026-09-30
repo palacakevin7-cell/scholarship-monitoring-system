@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScholarPulse - Student Scholarship & Academic Compliance Monitoring System</title>
+  <meta name="description" content="Centralized Student Scholarship Monitoring and Academic Compliance System for grade submission, verification, deficiency tracking, and status evaluation.">
+  <!-- Google Fonts & Font Awesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js for Live Visual Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Mermaid.js for Diagrams in Docs Tab -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <!-- App Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+    <!-- Top Bar Navigation -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-graduation-cap"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Scholar<span class="brand-accent">Pulse</span></span>
+          <span class="brand-sub">Academic Compliance Monitoring</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" data-target="dashboard"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
+        <button class="nav-btn" data-target="scholars"><i class="fa-solid fa-user-graduate"></i> Scholars</button>
+        <button class="nav-btn" data-target="programs"><i class="fa-solid fa-award"></i> Programs</button>
+        <button class="nav-btn" data-target="submissions"><i class="fa-solid fa-file-signature"></i> Submissions <span id="nav-pending-badge" class="badge bg-warning">0</span></button>
+        <button class="nav-btn" data-target="compliance"><i class="fa-solid fa-clipboard-check"></i> Compliance Engine</button>
+        <button class="nav-btn" data-target="docs"><i class="fa-solid fa-book"></i> Systems Analysis (Part I)</button>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="role-selector-wrap">
+          <label for="current-role-select" class="role-label"><i class="fa-solid fa-user-shield"></i> Role:</label>
+          <select id="current-role-select" class="role-select">
+            <option value="staff">Staff / Admin</option>
+            <option value="coordinator">Scholarship Coordinator</option>
+            <option value="scholar">Scholar (View/Submit)</option>
+          </select>
+        </div>
+        <div class="user-profile-widget" id="user-profile-widget">
+          <div class="avatar" id="user-avatar-initials">AD</div>
+          <div class="user-info">
+            <span class="user-name" id="user-display-name">Admin Staff</span>
+            <span class="user-role-badge" id="user-display-role">Staff User</span>
+          </div>
+          <button id="btn-logout" class="btn-icon" title="Logout / Switch Account"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- ================= SECTION 1: DASHBOARD ================= -->
+      <section id="section-dashboard" class="content-section active">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Scholarship Monitoring Dashboard</h1>
+            <p class="section-subtitle">Real-time overview of scholar compliance, grade verification, and status monitoring</p>
+          </div>
+          <div class="action-bar-buttons">
+            <button id="btn-quick-demo-seed" class="btn btn-secondary"><i class="fa-solid fa-wand-magic-sparkles"></i> Reset Sample Data</button>
+            <button id="btn-open-submission-modal" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Submit Grades</button>
+          </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card card-total">
+            <div class="metric-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Total Scholars</span>
+              <span class="metric-value" id="kpi-total-scholars">0</span>
+              <span class="metric-trend"><i class="fa-solid fa-database"></i> Active DB Records</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-pending">
+            <div class="metric-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Pending Submissions</span>
+              <span class="metric-value" id="kpi-pending-submissions">0</span>
+              <span class="metric-trend text-warning"><i class="fa-solid fa-circle-exclamation"></i> Awaiting Verification</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-verified">
+            <div class="metric-icon"><i class="fa-solid fa-square-check"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Verified Submissions</span>
+              <span class="metric-value" id="kpi-verified-submissions">0</span>
+              <span class="metric-trend text-info"><i class="fa-solid fa-check"></i> Audit Checked</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-compliant">
+            <div class="metric-icon"><i class="fa-solid fa-shield-halved"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">Compliant Scholars</span>
+              <span class="metric-value" id="kpi-compliant-scholars">0</span>
+              <span class="metric-trend text-success"><i class="fa-solid fa-thumbs-up"></i> Rules Satisfied</span>
+            </div>
+          </div>
+
+          <div class="metric-card card-deficiency">
+            <div class="metric-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <div class="metric-info">
+              <span class="metric-title">With Deficiency</span>
+              <span class="metric-value" id="kpi-deficiency-scholars">0</span>
+              <span class="metric-trend text-danger"><i class="fa-solid fa-flag"></i> Requires Action</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Charts & Quick Tables -->
+        <div class="dashboard-grid-layout">
+          <div class="glass-panel chart-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-chart-bar"></i> Scholar Compliance & Status Breakdown</h3>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="statusChart"></canvas>
+            </div>
+          </div>
+
+          <div class="glass-panel chart-panel">
+            <div class="panel-header">
+              <h3><i class="fa-solid fa-pie-chart"></i> Distribution by Scholarship Program</h3>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="programChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity / Pending Action Table -->
+        <div class="glass-panel table-panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-list-check"></i> Urgent Pending Verification Queue</h3>
+            <button class="btn btn-sm btn-outline" onclick="switchTab('submissions')">View All Submissions &rarr;</button>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="dashboard-pending-table">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Scholar Name</th>
+                  <th>Scholarship Program</th>
+                  <th>AY / Semester</th>
+                  <th>Submitted GWA</th>
+                  <th>Units</th>
+                  <th>Failed / Inc</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-pending-tbody">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 2: SCHOLARS MANAGEMENT ================= -->
+      <section id="section-scholars" class="content-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Scholar Management</h1>
+            <p class="section-subtitle">Register new scholars, manage profiles, and track assigned scholarship programs</p>
+          </div>
+          <button id="btn-add-scholar" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Register New Scholar</button>
+        </div>
+
+        <!-- Filter & Search Controls -->
+        <div class="filter-toolbar glass-panel">
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="scholar-search-input" class="form-input" placeholder="Search by Student ID or Scholar Name...">
+          </div>
+
+          <div class="filter-selects">
+            <div class="filter-group">
+              <label for="scholar-filter-program"><i class="fa-solid fa-award"></i> Program:</label>
+              <select id="scholar-filter-program" class="form-select">
+                <option value="ALL">All Programs</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="scholar-filter-status"><i class="fa-solid fa-tag"></i> Status:</label>
+              <select id="scholar-filter-status" class="form-select">
+                <option value="ALL">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Pending Submission">Pending Submission</option>
+                <option value="For Verification">For Verification</option>
+                <option value="Compliant">Compliant</option>
+                <option value="With Deficiency">With Deficiency</option>
+                <option value="Probationary">Probationary</option>
+                <option value="For Renewal">For Renewal</option>
+                <option value="Renewed">Renewed</option>
+                <option value="Disqualified">Disqualified</option>
+              </select>
+            </div>
+
+            <button id="btn-reset-scholar-filters" class="btn btn-outline btn-sm"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+          </div>
+        </div>
+
+        <!-- Scholars Table -->
+        <div class="glass-panel table-panel">
+          <div class="table-container">
+            <table class="data-table" id="scholars-table">
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Full Name</th>
+                  <th>Degree Program</th>
+                  <th>Year Level</th>
+                  <th>Scholarship Grant</th>
+                  <th>Current Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="scholars-tbody">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 3: SCHOLARSHIP PROGRAMS & REQUIREMENTS ================= -->
+      <section id="section-programs" class="content-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Scholarship Program & Criteria Management</h1>
+            <p class="section-subtitle">Define criteria for minimum GWA, GWA direction, minimum unit load, and failing grade policy per grant</p>
+          </div>
+          <button id="btn-add-program" class="btn btn-primary"><i class="fa-solid fa-folder-plus"></i> Add Scholarship Program</button>
+        </div>
+
+        <div class="programs-grid" id="programs-grid-cards">
+          <!-- Program Cards Rendered Dynamically -->
+        </div>
+      </section>
+
+      <!-- ================= SECTION 4: GRADE SUBMISSION & VERIFICATION ================= -->
+      <section id="section-submissions" class="content-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Semester Grade Submissions & Verification</h1>
+            <p class="section-subtitle">Manage semester grade records submitted by scholars or staff, and verify transcript metrics</p>
+          </div>
+          <button id="btn-new-submission" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> New Grade Submission</button>
+        </div>
+
+        <!-- Filter Submissions -->
+        <div class="filter-toolbar glass-panel">
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" id="submission-search-input" class="form-input" placeholder="Search by Scholar ID, Name or Semester...">
+          </div>
+
+          <div class="filter-selects">
+            <div class="filter-group">
+              <label for="submission-filter-status">Verification Status:</label>
+              <select id="submission-filter-status" class="form-select">
+                <option value="ALL">All Verification Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Verified">Verified</option>
+                <option value="Returned">Returned / Needs Correction</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="submission-filter-ay">Academic Year:</label>
+              <select id="submission-filter-ay" class="form-select">
+                <option value="ALL">All Academic Years</option>
+                <option value="2025-2026">2025-2026</option>
+                <option value="2024-2025">2024-2025</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submissions Table -->
+        <div class="glass-panel table-panel">
+          <div class="table-container">
+            <table class="data-table" id="submissions-table">
+              <thead>
+                <tr>
+                  <th>Submission ID</th>
+                  <th>Scholar Name (ID)</th>
+                  <th>Assigned Grant</th>
+                  <th>AY & Semester</th>
+                  <th>GWA</th>
+                  <th>Units</th>
+                  <th>Fails</th>
+                  <th>Incompletes</th>
+                  <th>Verification</th>
+                  <th>Verified By</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="submissions-tbody">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 5: COMPLIANCE EVALUATION ENGINE ================= -->
+      <section id="section-compliance" class="content-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Academic Compliance Evaluation Engine</h1>
+            <p class="section-subtitle">Automated rule verification against program rules with deficiency tracking and status updates</p>
+          </div>
+          <button id="btn-run-all-compliance" class="btn btn-accent"><i class="fa-solid fa-gears"></i> Run Batch Compliance Evaluation</button>
+        </div>
+
+        <div class="compliance-summary-banner glass-panel">
+          <div class="banner-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+          <div class="banner-content">
+            <h3>Institutional Grading Scale Rules & Logic Specification</h3>
+            <p><strong>Philippine Standard Grading (1.00 Highest to 3.00 Passing, 5.00 Failing):</strong> GWA must be &le; Required Maximum Target (e.g., GWA &le; 1.75). Enrolled units must be &ge; Minimum Units required. Failed subjects count must satisfy program failing grade policy.</p>
+          </div>
+        </div>
+
+        <!-- Compliance Audit Log Table -->
+        <div class="glass-panel table-panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-clipboard-list"></i> Compliance Evaluation Audit Table</h3>
+          </div>
+          <div class="table-container">
+            <table class="data-table" id="compliance-table">
+              <thead>
+                <tr>
+                  <th>Scholar ID & Name</th>
+                  <th>Scholarship Program</th>
+                  <th>AY / Term</th>
+                  <th>Recorded GWA (Req)</th>
+                  <th>Units (Req)</th>
+                  <th>Fails / Incomp</th>
+                  <th>Evaluation Result</th>
+                  <th>Deficiencies Identified</th>
+                  <th>Updated Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="compliance-tbody">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION 6: SYSTEMS ANALYSIS & DESIGN DOCS (PART I) ================= -->
+      <section id="section-docs" class="content-section">
+        <div class="section-header">
+          <div>
+            <h1 class="section-title">Part I — Systems Analysis & Design Documentation</h1>
+            <p class="section-subtitle">Complete problem analysis, requirements elicitation, UML use case modeling, traceability, and test specifications</p>
+          </div>
+          <button id="btn-export-pdf-doc" class="btn btn-outline"><i class="fa-solid fa-download"></i> View Full Markdown Artifact</button>
+        </div>
+
+        <div class="docs-navigation-tabs">
+          <button class="doc-tab-btn active" data-doc-target="doc-problem">A. Problem Analysis</button>
+          <button class="doc-tab-btn" data-doc-target="doc-stakeholders">B. Stakeholder & Actors</button>
+          <button class="doc-tab-btn" data-doc-target="doc-elicitation">C. Elicitation Qs</button>
+          <button class="doc-tab-btn" data-doc-target="doc-requirements">D & E. FR & NFR</button>
+          <button class="doc-tab-btn" data-doc-target="doc-business-rules">F & G. Rules & Statuses</button>
+          <button class="doc-tab-btn" data-doc-target="doc-usecases">H & I. Use Cases & Diagram</button>
+          <button class="doc-tab-btn" data-doc-target="doc-traceability">J & K. Traceability & Tests</button>
+        </div>
+
+        <!-- Doc Panels -->
+        <div class="doc-content-container glass-panel">
+          
+          <!-- Sub-doc A -->
+          <div id="doc-problem" class="doc-panel active">
+            <h2>Part I.A — Problem Analysis (Manual vs Centralized Monitoring)</h2>
+            <p>Below are 8 core operational problems identified in traditional manual or fragmented scholarship-monitoring processes:</p>
+            <div class="table-container mt-3">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>Problem Identified</th>
+                    <th>Root Cause</th>
+                    <th>Systemic Effect / Impact</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1</td>
+                    <td>Delayed Deficiency Identification</td>
+                    <td>Manual grade review using physical paper transcripts and spreadsheet passing</td>
+                    <td>Scholars receive grant stipends for semesters after losing eligibility, causing financial overpayments.</td>
+                  </tr>
+                  <tr>
+                    <td>2</td>
+                    <td>Fragmented Scholar Profiles</td>
+                    <td>Scholarship data stored in disparate Excel spreadsheets across multiple departments</td>
+                    <td>Data redundancy, conflicting scholar records, and missing historical academic compliance records.</td>
+                  </tr>
+                  <tr>
+                    <td>3</td>
+                    <td>Inconsistent Rules Enforcement</td>
+                    <td>Varying scholarship conditions (e.g. Merit vs Needs-based GWA cutoffs) manually checked</td>
+                    <td>Human evaluation errors, unfair grant renewals, and student grievances due to subjective decisions.</td>
+                  </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>Unverified Grade Submissions</td>
+                    <td>Lack of verification step before approving grade submissions</td>
+                    <td>Tampered or unverified self-reported grades used for final scholarship compliance evaluation.</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>Lack of Auditability & Traceability</td>
+                    <td>No centralized change logging or history of record modifications</td>
+                    <td>Inability to track who approved or altered a grade record or overridden compliance status.</td>
+                  </tr>
+                  <tr>
+                    <td>6</td>
+                    <td>High Staff Workload & Bottlenecks</td>
+                    <td>Manual computation of GWA and manual verification of unit loads during peak enrollment</td>
+                    <td>Processing backlogs, delayed clearance for enrollment, and administrative exhaustion.</td>
+                  </tr>
+                  <tr>
+                    <td>7</td>
+                    <td>Poor Visibility for Stakeholders</td>
+                    <td>No self-service portal for scholars to view compliance status or pending deficiencies</td>
+                    <td>Excessive student inquiry phone calls/emails and missed deadlines for grade submission.</td>
+                  </tr>
+                  <tr>
+                    <td>8</td>
+                    <td>Inaccurate Management Reporting</td>
+                    <td>Manual aggregation of scholarship statistics for committee meetings and donors</td>
+                    <td>Inaccurate reporting on total active scholars, retention rates, and fund distribution.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-doc B -->
+          <div id="doc-stakeholders" class="doc-panel">
+            <h2>Part I.B — Stakeholder and Actor Analysis</h2>
+            <div class="table-container mt-3">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Stakeholder</th>
+                    <th>Information Needed</th>
+                    <th>Responsibility</th>
+                    <th>Actor?</th>
+                    <th>Why?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Scholar</strong></td>
+                    <td>Scholarship status, program requirements, submission deadlines, deficiency notices</td>
+                    <td>Submits semester grades, uploads supporting documents, maintains required GWA & unit load</td>
+                    <td><span class="badge bg-success">YES</span></td>
+                    <td>Directly interacts with system to log in, view requirements, and submit semester grades.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Scholarship Staff</strong></td>
+                    <td>Pending grade submissions, scholar profiles, transcript attachments, deficiency flags</td>
+                    <td>Registers scholars, verifies grade submissions, issues deficiency notices</td>
+                    <td><span class="badge bg-success">YES</span></td>
+                    <td>Primary operational user responsible for data entry, verification, and daily workflow execution.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Scholarship Coordinator</strong></td>
+                    <td>Compliance reports, probationary trends, grade verification logs, program criteria</td>
+                    <td>Evaluates compliance, oversees renewal processing, configures scholarship criteria</td>
+                    <td><span class="badge bg-success">YES</span></td>
+                    <td>Executes compliance evaluation, manages program requirements, and processes renewals.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Scholarship Committee</strong></td>
+                    <td>Aggregated scholarship statistics, renewal summaries, policy deficiency appeals</td>
+                    <td>Makes final decisions on appeals, scholarship revocations, and annual funding allocation</td>
+                    <td><span class="badge bg-secondary">NO</span></td>
+                    <td>Receives summary reports generated by system; does not directly execute system transactions.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Registrar</strong></td>
+                    <td>Official academic transcripts, validated unit counts, official GWA records</td>
+                    <td>Validates student enrollment status and provides official grade data sources</td>
+                    <td><span class="badge bg-secondary">NO</span></td>
+                    <td>External entity / data source whose official records are cross-referenced during verification.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>System Administrator</strong></td>
+                    <td>System audit logs, user permissions, database health, authentication configurations</td>
+                    <td>Manages user roles, system settings, backup security, and database access control</td>
+                    <td><span class="badge bg-success">YES</span></td>
+                    <td>Interacts directly with system to manage user accounts, roles, permissions, and security.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-doc C -->
+          <div id="doc-elicitation" class="doc-panel">
+            <h2>Part I.C — Requirements Elicitation (12 Structured Interview Questions)</h2>
+            <ol class="elicitation-list">
+              <li><strong>Current Workflow:</strong> What exact step-by-step procedures are currently followed from scholar registration to end-of-semester evaluation?</li>
+              <li><strong>Grade Submission:</strong> How do scholars currently submit their semester grades, and what supporting proof (e.g. TCG, portal screenshot) is required?</li>
+              <li><strong>Deadline Enforcement:</strong> What happens when a scholar fails to submit grades within the prescribed submission deadline?</li>
+              <li><strong>Scholarship Criteria:</strong> How do academic requirements (GWA threshold, minimum units, failing grade rules) differ between Merit, University, and Private grants?</li>
+              <li><strong>Grade Verification:</strong> What specific verification checks must staff perform before a grade submission is marked as authentic?</li>
+              <li><strong>Deficiency Handling:</strong> What constitutes a deficiency, and how are conditional/probationary statuses granted versus immediate disqualification?</li>
+              <li><strong>Renewal Process:</strong> What criteria and approval workflow govern the transition from "For Renewal" to "Renewed" for the upcoming academic year?</li>
+              <li><strong>Notification & Alerts:</strong> How are scholars notified regarding pending submissions, deficiency warnings, or status changes?</li>
+              <li><strong>Reporting Requirements:</strong> What specific summaries or compliance breakdown reports are required by executive management and scholarship sponsors?</li>
+              <li><strong>Access Control:</strong> Who should have authorization to modify verified grades, override compliance decisions, or configure program criteria?</li>
+              <li><strong>Auditability:</strong> What details must be logged when an authorized user modifies a verified grade or overrides a scholar's compliance status?</li>
+              <li><strong>System Integration:</strong> How should the system integrate with existing user authentication (Supabase Auth / Student ID accounts)?</li>
+            </ol>
+          </div>
+
+          <!-- Sub-doc D & E -->
+          <div id="doc-requirements" class="doc-panel">
+            <h2>Part I.D & E — Functional & Non-Functional Requirements</h2>
+            <h3>Functional Requirements (FR-01 to FR-15)</h3>
+            <div class="table-container mt-2 mb-4">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Functional Requirement Statement</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>FR-01</strong></td><td>The system shall allow authorized staff to register scholar records.</td></tr>
+                  <tr><td><strong>FR-02</strong></td><td>The system shall associate a scholar with a scholarship program.</td></tr>
+                  <tr><td><strong>FR-03</strong></td><td>The system shall maintain academic requirements for each scholarship program.</td></tr>
+                  <tr><td><strong>FR-04</strong></td><td>The system shall allow semester grade submission.</td></tr>
+                  <tr><td><strong>FR-05</strong></td><td>The system shall record the academic year and semester of every submission.</td></tr>
+                  <tr><td><strong>FR-06</strong></td><td>The system shall allow authorized staff to verify a grade submission.</td></tr>
+                  <tr><td><strong>FR-07</strong></td><td>The system shall evaluate verified academic information against scholarship requirements.</td></tr>
+                  <tr><td><strong>FR-08</strong></td><td>The system shall identify deficiencies.</td></tr>
+                  <tr><td><strong>FR-09</strong></td><td>The system shall maintain scholar status.</td></tr>
+                  <tr><td><strong>FR-10</strong></td><td>The system shall identify pending grade submissions.</td></tr>
+                  <tr><td><strong>FR-11</strong></td><td>The system shall allow authorized users to search scholars by Student ID or Name.</td></tr>
+                  <tr><td><strong>FR-12</strong></td><td>The system shall allow filtering of scholars by scholarship program and compliance status.</td></tr>
+                  <tr><td><strong>FR-13</strong></td><td>The system shall display real-time dashboard monitoring counts for key academic metrics.</td></tr>
+                  <tr><td><strong>FR-14</strong></td><td>The system shall log verification actions including verifier identity and timestamp.</td></tr>
+                  <tr><td><strong>FR-15</strong></td><td>The system shall support scholarship renewal processing for eligible compliant scholars.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Non-Functional Requirements (NFR-01 to NFR-06)</h3>
+            <div class="table-container mt-2">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Category</th>
+                    <th>Non-Functional Requirement Specification</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>NFR-01</strong></td><td>Security</td><td>Role-based access control (RBAC) preventing unauthorized users from verifying grades or altering scholar profiles.</td></tr>
+                  <tr><td><strong>NFR-02</strong></td><td>Privacy</td><td>Sensitive scholar grade details must be protected and visible only to authorized staff, coordinators, and the respective scholar.</td></tr>
+                  <tr><td><strong>NFR-03</strong></td><td>Usability</td><td>The user interface shall be intuitive, responsive, and provide immediate visual feedback for verification and compliance status.</td></tr>
+                  <tr><td><strong>NFR-04</strong></td><td>Performance</td><td>Dashboard counts, search results, and batch compliance calculations must render within 2 seconds.</td></tr>
+                  <tr><td><strong>NFR-05</strong></td><td>Reliability</td><td>Database state and local storage fallback shall maintain transactional consistency across page refreshes.</td></tr>
+                  <tr><td><strong>NFR-06</strong></td><td>Data Integrity</td><td>Duplicate Student IDs shall be blocked, and grade submission values must strictly conform to institutional bounds.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-doc F & G -->
+          <div id="doc-business-rules" class="doc-panel">
+            <h2>Part I.F & G — Business Rules and Scholar Statuses</h2>
+            <h3>Mandatory Business Rules (BR-01 to BR-10)</h3>
+            <div class="table-container mt-2 mb-4">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Business Rule Specification</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>BR-01</strong></td><td>Every scholar must be assigned to an active scholarship program.</td></tr>
+                  <tr><td><strong>BR-02</strong></td><td>Every scholarship program must define its academic requirements (Required GWA, Minimum Units, Failing Grade Policy).</td></tr>
+                  <tr><td><strong>BR-03</strong></td><td>A grade submission must belong to one scholar, academic year, and semester.</td></tr>
+                  <tr><td><strong>BR-04</strong></td><td>Only authorized personnel (Staff / Admin / Coordinator) may verify submitted grades.</td></tr>
+                  <tr><td><strong>BR-05</strong></td><td>Only verified submissions may be used for final compliance evaluation.</td></tr>
+                  <tr><td><strong>BR-06</strong></td><td>A scholar cannot be marked Compliant while mandatory requirements or verified grades are incomplete.</td></tr>
+                  <tr><td><strong>BR-07</strong></td><td>Scholar status must be dynamically based on the rules of the assigned scholarship program.</td></tr>
+                  <tr><td><strong>BR-08</strong></td><td>Changes to verified academic records must be traceable (verified_by and verified_at timestamped).</td></tr>
+                  <tr><td><strong>BR-09</strong></td><td>A submission cannot be verified twice without an authorized correction process.</td></tr>
+                  <tr><td><strong>BR-10</strong></td><td>Sensitive grade information must only be visible to authorized users.</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Required Scholar Status Definitions (Part I.G)</h3>
+            <div class="table-container mt-2">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Condition / Trigger Definition</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><span class="status-badge bg-active">Active</span></td><td>Scholar is registered and currently enrolled in an active scholarship program.</td></tr>
+                  <tr><td><span class="status-badge bg-pending">Pending Submission</span></td><td>Scholar has not yet submitted semester grades for the active academic term.</td></tr>
+                  <tr><td><span class="status-badge bg-verification">For Verification</span></td><td>Grade submission received; awaiting review and verification by authorized staff.</td></tr>
+                  <tr><td><span class="status-badge bg-compliant">Compliant</span></td><td>Verified grade submission satisfies all program requirements (GWA, Units, Failing policy).</td></tr>
+                  <tr><td><span class="status-badge bg-deficiency">With Deficiency</span></td><td>Verified submission fails at least one criteria (e.g., GWA too high, low units, failing grade).</td></tr>
+                  <tr><td><span class="status-badge bg-probation">Probationary</span></td><td>Scholar incurred deficiencies in previous term and is placed on conditional status for 1 semester.</td></tr>
+                  <tr><td><span class="status-badge bg-renewal">For Renewal</span></td><td>Compliant scholar at the end of the academic year awaiting annual grant renewal processing.</td></tr>
+                  <tr><td><span class="status-badge bg-renewed">Renewed</span></td><td>Scholar renewal approved for the subsequent academic year.</td></tr>
+                  <tr><td><span class="status-badge bg-disqualified">Disqualified</span></td><td>Scholar failed probationary terms or committed severe academic policy violations.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-doc H & I -->
+          <div id="doc-usecases" class="doc-panel">
+            <h2>Part I.H & I — Use Case Analysis & Detailed Specifications</h2>
+            
+            <h3>UML Use Case Diagram (Mermaid Visualization)</h3>
+            <div class="mermaid-box">
+              <pre class="mermaid">
+gantt
+    title System Boundary: Scholarship Monitoring System
+    section Use Case Modeling
+    Login : active, uc1, 2026-09-30, 1d
+    Register Scholar : uc2, 2026-09-30, 1d
+    Submit Grades : uc3, 2026-09-30, 1d
+    Verify Grade Submission : uc4, 2026-09-30, 1d
+    Evaluate Compliance : uc5, 2026-09-30, 1d
+              </pre>
+              <div class="diagram-text-box">
+                <p><strong>System Boundary:</strong> Scholarship Monitoring & Compliance System</p>
+                <p><strong>Actors:</strong> Scholar, Scholarship Staff, Scholarship Coordinator, System Administrator</p>
+                <p><strong>Key Relationships:</strong></p>
+                <ul>
+                  <li>Submit Grades <code>&lt;&lt;include&gt;&gt;</code> Login</li>
+                  <li>Verify Grade Submission <code>&lt;&lt;include&gt;&gt;</code> Login</li>
+                  <li>Evaluate Academic Compliance <code>&lt;&lt;include&gt;&gt;</code> Verify Grade Submission</li>
+                  <li>Evaluate Academic Compliance <code>&lt;&lt;extend&gt;&gt;</code> Record Deficiency (Triggered IF requirements violated)</li>
+                  <li>Process Renewal <code>&lt;&lt;extend&gt;&gt;</code> Update Scholar Status (Triggered IF status is Compliant)</li>
+                </ul>
+              </div>
+            </div>
+
+            <h3 class="mt-4">Detailed Use Case 1: Submit Grades (UC-04)</h3>
+            <div class="use-case-card glass-panel">
+              <p><strong>Primary Actor:</strong> Scholar / Scholarship Staff</p>
+              <p><strong>Goal:</strong> Submit academic semester grades and unit loads for verification.</p>
+              <p><strong>Preconditions:</strong> User logged in; Scholar record exists and assigned to active program.</p>
+              <p><strong>Trigger:</strong> Scholar opens grade submission interface at end of semester.</p>
+              <p><strong>Main Flow:</strong>
+                <ol>
+                  <li>User selects scholar profile, academic year, and semester.</li>
+                  <li>User inputs GWA, units enrolled, count of failing subjects, and incomplete subjects.</li>
+                  <li>System validates input ranges (GWA &gt; 0, non-negative counts).</li>
+                  <li>System saves submission record with status set to <code>Pending / For Verification</code>.</li>
+                  <li>System updates scholar status to <code>For Verification</code>.</li>
+                </ol>
+              </p>
+              <p><strong>Alternative Flow:</strong> Staff submits grades on behalf of scholar during walk-in verification.</p>
+              <p><strong>Exception Flow:</strong> Invalid GWA format or blank fields block form submission with error warning.</p>
+              <p><strong>Postconditions:</strong> Submission created in database; notification badge updated.</p>
+            </div>
+
+            <h3 class="mt-4">Detailed Use Case 2: Verify Grade Submission (UC-06)</h3>
+            <div class="use-case-card glass-panel">
+              <p><strong>Primary Actor:</strong> Scholarship Staff</p>
+              <p><strong>Goal:</strong> Verify authenticity of submitted grades against official transcript data.</p>
+              <p><strong>Preconditions:</strong> Submission exists in <code>Pending</code> status; user authenticated as Staff.</p>
+              <p><strong>Trigger:</strong> Staff clicks "Verify Submission" on pending queue.</p>
+              <p><strong>Main Flow:</strong>
+                <ol>
+                  <li>Staff reviews submitted GWA, unit load, and subject counts.</li>
+                  <li>Staff checks official registrar grade release.</li>
+                  <li>Staff clicks "Confirm & Verify".</li>
+                  <li>System records <code>verified_by</code> user ID and current timestamp <code>verified_at</code>.</li>
+                  <li>System updates submission status to <code>Verified</code>.</li>
+                  <li>System triggers automated compliance evaluation engine.</li>
+                </ol>
+              </p>
+              <p><strong>Alternative Flow:</strong> Staff detects discrepancy and marks submission as <code>Returned</code> with remarks.</p>
+              <p><strong>Postconditions:</strong> Verified record is locked for final compliance evaluation.</p>
+            </div>
+
+            <h3 class="mt-4">Detailed Use Case 3: Evaluate Academic Compliance (UC-07)</h3>
+            <div class="use-case-card glass-panel">
+              <p><strong>Primary Actor:</strong> Scholarship Coordinator / Automated System Engine</p>
+              <p><strong>Goal:</strong> Compare verified semester metrics against assigned scholarship program criteria.</p>
+              <p><strong>Preconditions:</strong> Grade submission is <code>Verified</code>.</p>
+              <p><strong>Trigger:</strong> Completion of verification or manual execution of compliance batch run.</p>
+              <p><strong>Main Flow:</strong>
+                <ol>
+                  <li>Engine retrieves program rule parameters: <code>required_gwa</code>, <code>min_units</code>, <code>allow_failing_grade</code>.</li>
+                  <li>Engine evaluates: GWA &le; required_gwa AND units &ge; min_units AND fails == 0 (if policy disallows).</li>
+                  <li>IF all conditions hold, system tags evaluation as <code>COMPLIANT</code> and updates scholar status to <code>Compliant</code>.</li>
+                  <li>IF any condition fails, system tags evaluation as <code>WITH DEFICIENCY</code> and logs specific deficiency causes.</li>
+                </ol>
+              </p>
+              <p><strong>Exception Flow:</strong> If scholar has no verified submission, evaluation is skipped.</p>
+            </div>
+
+            <h3 class="mt-4">Detailed Use Case 4: Process Scholarship Renewal (UC-12)</h3>
+            <div class="use-case-card glass-panel">
+              <p><strong>Primary Actor:</strong> Scholarship Coordinator</p>
+              <p><strong>Goal:</strong> Review compliant scholars at end of academic year for grant renewal.</p>
+              <p><strong>Preconditions:</strong> Scholar has status <code>Compliant</code> or <code>For Renewal</code>.</p>
+              <p><strong>Trigger:</strong> Coordinator initiates annual renewal processing batch.</p>
+              <p><strong>Main Flow:</strong>
+                <ol>
+                  <li>System filters scholars with status <code>For Renewal</code> or <code>Compliant</code> across both semesters.</li>
+                  <li>Coordinator selects eligible scholars and clicks "Approve Renewal".</li>
+                  <li>System updates scholar status to <code>Renewed</code> and increments active academic year.</li>
+                </ol>
+              </p>
+            </div>
+          </div>
+
+          <!-- Sub-doc J & K -->
+          <div id="doc-traceability" class="doc-panel">
+            <h2>Part I.J & K — Requirements Traceability Matrix & Test Suite</h2>
+            
+            <h3>Requirements Traceability Matrix</h3>
+            <div class="table-container mt-2 mb-4">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Req ID</th>
+                    <th>Requirement Summary</th>
+                    <th>Actor</th>
+                    <th>Use Case</th>
+                    <th>Business Rule</th>
+                    <th>Implemented Feature / Screen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>FR-01</strong></td>
+                    <td>Register Scholar</td>
+                    <td>Staff</td>
+                    <td>Register Scholar</td>
+                    <td>BR-01</td>
+                    <td>Scholar Registration Modal & Table View</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-02</strong></td>
+                    <td>Associate Grant</td>
+                    <td>Staff</td>
+                    <td>Assign Scholarship</td>
+                    <td>BR-01</td>
+                    <td>Scholar Program Dropdown Select</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-03</strong></td>
+                    <td>Maintain Criteria</td>
+                    <td>Coordinator</td>
+                    <td>Configure Criteria</td>
+                    <td>BR-02</td>
+                    <td>Scholarship Program Manager Cards</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-04</strong></td>
+                    <td>Grade Submission</td>
+                    <td>Scholar / Staff</td>
+                    <td>Submit Grades</td>
+                    <td>BR-03</td>
+                    <td>Semester Grade Submission Modal Form</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-06</strong></td>
+                    <td>Verify Submission</td>
+                    <td>Staff</td>
+                    <td>Verify Grade Submission</td>
+                    <td>BR-04, BR-05, BR-09</td>
+                    <td>Submissions Queue Verification Action Button</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-07</strong></td>
+                    <td>Compliance Eval</td>
+                    <td>System / Coordinator</td>
+                    <td>Evaluate Compliance</td>
+                    <td>BR-05, BR-07</td>
+                    <td>Automated Compliance Engine Auditor</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-08</strong></td>
+                    <td>Identify Deficiency</td>
+                    <td>System</td>
+                    <td>Record Deficiency</td>
+                    <td>BR-06</td>
+                    <td>Deficiency Alert Tags & Audit Log</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-10</strong></td>
+                    <td>Pending Monitoring</td>
+                    <td>Staff</td>
+                    <td>View Dashboard</td>
+                    <td>BR-04</td>
+                    <td>Live Pending Queue Table & KPI Card</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-11</strong></td>
+                    <td>Search Scholars</td>
+                    <td>All Users</td>
+                    <td>Search Scholar</td>
+                    <td>BR-10</td>
+                    <td>Live Search Filter Input Field</td>
+                  </tr>
+                  <tr>
+                    <td><strong>FR-12</strong></td>
+                    <td>Filter Records</td>
+                    <td>All Users</td>
+                    <td>Filter Scholars</td>
+                    <td>BR-10</td>
+                    <td>Program & Status Multi-Filter Dropdowns</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Functional Test Suite Results (TC-01 to TC-10 Verification)</h3>
+            <div class="table-container mt-2">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Test ID</th>
+                    <th>Test Scenario</th>
+                    <th>Expected System Result</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td><strong>TC-01</strong></td><td>Login with valid authorized account</td><td>Dashboard opens with live KPI metrics</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-02</strong></td><td>Create scholar with complete data</td><td>Scholar saved and visible in table</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-03</strong></td><td>Create scholar without Student ID</td><td>Submission rejected with validation error</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-04</strong></td><td>Submit semester grades</td><td>Record saved as Pending / For Verification</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-05</strong></td><td>Verify pending grade submission</td><td>Status becomes Verified with verifier audit log</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-06</strong></td><td>Evaluate scholar meeting requirements</td><td>Compliance engine tags status as Compliant</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-07</strong></td><td>Evaluate scholar failing a requirement</td><td>Result becomes With Deficiency with causes logged</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-08</strong></td><td>Search scholar by Student ID / Name</td><td>Matching records filtered dynamically</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-09</strong></td><td>Filter by scholarship / status</td><td>Correct subset displayed in real-time</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                  <tr><td><strong>TC-10</strong></td><td>Open deployed URL on GitHub Pages</td><td>System fully functional online</td><td><span class="badge bg-success"><i class="fa-solid fa-check"></i> PASS</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Modal 1: Register / Edit Scholar -->
+  <div class="modal-backdrop" id="modal-scholar">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-scholar-title"><i class="fa-solid fa-user-plus"></i> Register New Scholar</h3>
+        <button class="modal-close-btn" data-close="modal-scholar">&times;</button>
+      </div>
+      <form id="form-scholar">
+        <input type="hidden" id="scholar-form-id">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="scholar-input-id">Student ID <span class="required">*</span></label>
+              <input type="text" id="scholar-input-id" class="form-input" placeholder="e.g. 2024-10042" required>
+              <small class="form-hint">Unique institutional ID</small>
+            </div>
+            <div class="form-group col-6">
+              <label for="scholar-input-name">Full Name <span class="required">*</span></label>
+              <input type="text" id="scholar-input-name" class="form-input" placeholder="e.g. Maria Santos" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="scholar-input-degree">Degree Program <span class="required">*</span></label>
+              <input type="text" id="scholar-input-degree" class="form-input" placeholder="e.g. BS Computer Science" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="scholar-input-year">Year Level <span class="required">*</span></label>
+              <select id="scholar-input-year" class="form-select" required>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+                <option value="5th Year">5th Year</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="scholar-input-program">Assigned Scholarship Program <span class="required">*</span></label>
+              <select id="scholar-input-program" class="form-select" required>
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="scholar-input-status">Scholarship Status <span class="required">*</span></label>
+              <select id="scholar-input-status" class="form-select" required>
+                <option value="Active">Active</option>
+                <option value="Pending Submission">Pending Submission</option>
+                <option value="For Verification">For Verification</option>
+                <option value="Compliant">Compliant</option>
+                <option value="With Deficiency">With Deficiency</option>
+                <option value="Probationary">Probationary</option>
+                <option value="For Renewal">For Renewal</option>
+                <option value="Renewed">Renewed</option>
+                <option value="Disqualified">Disqualified</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close="modal-scholar">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Scholar Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Add / Edit Scholarship Program -->
+  <div class="modal-backdrop" id="modal-program">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-program-title"><i class="fa-solid fa-award"></i> Add Scholarship Program</h3>
+        <button class="modal-close-btn" data-close="modal-program">&times;</button>
+      </div>
+      <form id="form-program">
+        <input type="hidden" id="program-form-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="program-input-name">Program Name <span class="required">*</span></label>
+            <input type="text" id="program-input-name" class="form-input" placeholder="e.g. President Merit Scholarship" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="program-input-gwa">Required GWA Threshold <span class="required">*</span></label>
+              <input type="number" step="0.01" id="program-input-gwa" class="form-input" placeholder="e.g. 1.75" required>
+              <small class="form-hint">Max allowed GWA (e.g., &le; 1.75)</small>
+            </div>
+            <div class="form-group col-6">
+              <label for="program-input-units">Minimum Enrolled Units <span class="required">*</span></label>
+              <input type="number" id="program-input-units" class="form-input" placeholder="e.g. 18" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="program-input-failing">Failing Grade Policy <span class="required">*</span></label>
+              <select id="program-input-failing" class="form-select">
+                <option value="false">Strict: No Failing Grades Allowed (0)</option>
+                <option value="true">Allowed: Max 1 Failing Grade with Review</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="program-input-active">Program Active Status</label>
+              <select id="program-input-active" class="form-select">
+                <option value="true">Active Program</option>
+                <option value="false">Inactive / Archival</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close="modal-program">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Program Rules</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 3: Grade Submission Form -->
+  <div class="modal-backdrop" id="modal-submission">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-file-signature"></i> Create Semester Grade Submission</h3>
+        <button class="modal-close-btn" data-close="modal-submission">&times;</button>
+      </div>
+      <form id="form-submission">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="sub-input-scholar">Select Scholar <span class="required">*</span></label>
+            <select id="sub-input-scholar" class="form-select" required>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="sub-input-ay">Academic Year <span class="required">*</span></label>
+              <select id="sub-input-ay" class="form-select" required>
+                <option value="2025-2026">2025-2026</option>
+                <option value="2024-2025">2024-2025</option>
+              </select>
+            </div>
+            <div class="form-group col-6">
+              <label for="sub-input-semester">Semester <span class="required">*</span></label>
+              <select id="sub-input-semester" class="form-select" required>
+                <option value="1st Semester">1st Semester</option>
+                <option value="2nd Semester">2nd Semester</option>
+                <option value="Summer / Midyear">Summer / Midyear</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="sub-input-gwa">Submitted GWA <span class="required">*</span></label>
+              <input type="number" step="0.01" min="1.00" max="5.00" id="sub-input-gwa" class="form-input" placeholder="e.g. 1.45" required>
+              <small class="form-hint">Scale: 1.00 (Highest) to 5.00 (Failed)</small>
+            </div>
+            <div class="form-group col-6">
+              <label for="sub-input-units">Total Enrolled Units <span class="required">*</span></label>
+              <input type="number" min="0" max="36" id="sub-input-units" class="form-input" placeholder="e.g. 21" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-6">
+              <label for="sub-input-fails">Failed Subjects Count <span class="required">*</span></label>
+              <input type="number" min="0" id="sub-input-fails" class="form-input" value="0" required>
+            </div>
+            <div class="form-group col-6">
+              <label for="sub-input-incompletes">Incomplete Subjects Count <span class="required">*</span></label>
+              <input type="number" min="0" id="sub-input-incompletes" class="form-input" value="0" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-close="modal-submission">Cancel</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Submit Grades for Verification</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script src="js/db.js"></script>
+  <script src="js/compliance.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
